@@ -1,47 +1,58 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List
+import json
+import os
 
 app = FastAPI()
 
-@app.get("/")
-def inicio():
-    return {"mensaje": "Bienvenido a la galería de arte API"}
+ARCHIVO_OBRAS = "obras.json"
 
-
-# Modelo de Obra de Arte
 class ObraDeArte(BaseModel):
     id: int
+    titulo: str
     autor: str
     año: int
     precio: float
-    tipo: str  # pintura, escultura, fotografía, etc.
+    tipo: str
 
-# Catálogo inicial (como base de datos temporal)
-catalogo_obras: List[ObraDeArte] = [
-    ObraDeArte(id=1, autor="Frida Kahlo", año=1939, precio=150000.0, tipo="Pintura"),
-    ObraDeArte(id=2, autor="Fernando Botero", año=1995, precio=70000.0, tipo="Escultura")
-]
+def cargar_obras():
+    if os.path.exists(ARCHIVO_OBRAS):
+        with open(ARCHIVO_OBRAS, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
 
-# 1. Listar todas las obras
-@app.get("/obras", response_model=List[ObraDeArte])
-def listar_obras():
-    return catalogo_obras
+def guardar_obras(obras):
+    with open(ARCHIVO_OBRAS, "w", encoding="utf-8") as f:
+        json.dump(obras, f, indent=4, ensure_ascii=False)
 
-# 2. Eliminar una obra por ID
-@app.delete("/obras/{obra_id}")
-def eliminar_obra(obra_id: int):
-    for obra in catalogo_obras:
-        if obra.id == obra_id:
-            catalogo_obras.remove(obra)
-            return {"mensaje": f"Obra con ID {obra_id} eliminada"}
-    raise HTTPException(status_code=404, detail="Obra no encontrada")
+@app.get("/obras")
+def obtener_obras():
+    return cargar_obras()
 
-# 3. Actualizar el precio de una obra
-@app.put("/obras/{obra_id}/precio")
-def actualizar_precio(obra_id: int, nuevo_precio: float):
-    for obra in catalogo_obras:
-        if obra.id == obra_id:
-            obra.precio = nuevo_precio
-            return {"mensaje": f"Precio actualizado a {nuevo_precio}"}
-    raise HTTPException(status_code=404, detail="Obra no encontrada")
+@app.post("/obras")
+def agregar_obra(obra: ObraDeArte):
+    obras = cargar_obras()
+    if any(o["id"] == obra.id for o in obras):
+        raise HTTPException(status_code=400, detail="Ya existe una obra con ese ID.")
+    obras.append(obra.dict())
+    guardar_obras(obras)
+    return {"mensaje": "Obra agregada exitosamente."}
+
+@app.delete("/obras/{id}")
+def eliminar_obra(id: int):
+    obras = cargar_obras()
+    obras_nuevas = [o for o in obras if o["id"] != id]
+    if len(obras_nuevas) == len(obras):
+        raise HTTPException(status_code=404, detail="Obra no encontrada.")
+    guardar_obras(obras_nuevas)
+    return {"mensaje": "Obra eliminada exitosamente."}
+
+@app.put("/obras/{id}")
+def actualizar_precio(id: int, nuevo_precio: float):
+    obras = cargar_obras()
+    for obra in obras:
+        if obra["id"] == id:
+            obra["precio"] = nuevo_precio
+            guardar_obras(obras)
+            return {"mensaje": "Precio actualizado correctamente."}
+    raise HTTPException(status_code=404, detail="Obra no encontrada.")
