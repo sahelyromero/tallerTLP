@@ -1,0 +1,18 @@
+[
+    {
+        "id": 1,
+        "titulo": "Mona Lisa",
+        "autor": "Leonardo da Vinci",
+        "año": 1509,
+        "precio": 1000000000.0,
+        "tipo": "Pintura / invaluable"
+    },
+    {
+        "id": 2,
+        "titulo": "La Columna Rota",
+        "autor": "Frida Khalo",
+        "año": 1944,
+        "precio": 150000.0,
+        "tipo": "Pintura"
+    }
+]
