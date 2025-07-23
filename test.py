@@ -59,5 +59,31 @@ class TestGaleriaArte(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("mensaje", response.json())
 
+    def test_actualizar_precio_id_inexistente(self):
+        response = client.put("/obras/9999?nuevo_precio=123456")  
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("detail", response.json())
+    
+    def test_borrar_obra_id_inexistente(self):
+        response = client.delete("/obras/9999")  
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("detail", response.json())
+
+    def test_agregar_obra_id_duplicado(self):
+        obra_duplicada = {
+            "id": 1, 
+            "titulo": "Duplicado",
+            "autor": "Autor Falso",
+            "año": 2024,
+            "precio": 1000.0,
+            "tipo": "Escultura"
+        }
+        response = client.post("/obras", json=obra_duplicada)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+        self.assertEqual(response.json()["detail"], "Ya existe una obra con ese ID.")
+
+
+
 if __name__ == '__main__':
     unittest.main()
